@@ -1,6 +1,6 @@
-import {Alert, FlatList, SafeAreaView, StatusBar, StyleSheet, View} from "react-native";
+import {FlatList, SafeAreaView, StatusBar, StyleSheet, View, Text, Dimensions} from "react-native";
 import React, {useCallback, useContext, useEffect, useState} from "react";
-import {Add_location_main, Button, ButtonMore, ButtonRefresh} from "../components/button";
+import {Add_location, Add_location_main, Button, ButtonMore} from "../components/button";
 import {useService} from "../db/services/service";
 import {useBackgroundTask} from "../hooks/background_worker";
 import Location from "../components/location";
@@ -9,41 +9,66 @@ import CreateLocation from "../components/create_location";
 import * as DocumentPicker from "expo-document-picker";
 import {styles_exp} from "../styles/style";
 import {Context} from "../context/context";
-
+import {LocationContext} from "../context/location_context";
 
 const MainScreen = ({navigation}) => {
-    const [modalVisible, setModalVisible] = useState(false);
     const [modalVisible2, setModalVisible2] = useState(false);
     const {setLoading} = useContext(Context)
-    const [locations, setLocations] = useState([]);
+    const {setTypeOfMessage, setOpenState, setMessage, SetTimeOut} = useContext(Context)
+    const {get_list,
+        locations,
+        selectedLocations,
+        setSelectedLocations,
+        modalVisible, setModalVisible
+    } = useContext(LocationContext)
+
+    const [toSelect, setState] = useState(null)
+
+    useEffect(()=> {
+        if(selectedLocations.length <= 0){
+            setState(false)
+        }else{
+            setState(true)
+        }
+    }, [selectedLocations])
 
 
-    const get_list = useCallback(
-        async () => {
-            const response = await get_list_of_locations()
-            setLocations(response)
-        }, [locations])
+    const handleLocationPress = useCallback((locationId) => {
+        setSelectedLocations(prevLocations => {
+            const index = prevLocations.indexOf(locationId);
+            if (index > -1) {
+                return prevLocations.filter((id) => id !== locationId);
+            } else {
+                return [...prevLocations, locationId];
+            }
+        });
+    },[]);
+
 
     const {
         importExcel,
-        exportToExcel
+        fn_export
     } = useBackgroundTask();
 
     const {
         insert_items_base_codes,
-        get_export_datas,
         getItems,
-        get_list_of_locations
     } = useService()
 
 
     useEffect(()=> {
         get_list()
-    }, [locations])
+    }, [modalVisible, modalVisible2])
+
+    useEffect(()=> {
+        get_list()
+    }, [])
 
     const fn_import = async () => {
         try {
-            const result = await DocumentPicker.getDocumentAsync({copyToCacheDirectory: false});
+            const result = await DocumentPicker.getDocumentAsync({
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            });
             if(result.type === "success"){
                 setModalVisible(false)
                 setLoading(true)
@@ -51,7 +76,10 @@ const MainScreen = ({navigation}) => {
                 const result_db = await insert_items_base_codes(data)
                 if(result_db.uploaded === "success"){
                     const length = await getItems()
-                    Alert.alert(`Успешно загружено ${length} товары`)
+                    setTypeOfMessage("success")
+                    SetTimeOut(2500)
+                    setOpenState(true)
+                    setMessage(`Успешно загружено ${length} товары`)
                 }
             }
         }catch (e){
@@ -61,24 +89,21 @@ const MainScreen = ({navigation}) => {
         }
     };
 
-    const fn_export = async () => {
-        setModalVisible(false);
-        setLoading(true);
 
-        try {
-            const _array = await get_export_datas();
-            const exported = await exportToExcel(_array);
-            if(exported){
-                Alert.alert("Успешно экспортировано")
-            }
-        } catch (e) {
-            console.log(e);
-        } finally {
-            setLoading(false);
+
+    useEffect(()=> {
+        if(locations && locations.length <= 0){
+            setTypeOfMessage("warning")
+            SetTimeOut(2500)
+            setOpenState(true)
+            setMessage(`Пусто, создайте новые локации`)
         }
+    }, [])
+
+    const dataNotExistStyle = {
+        height: Dimensions.get("window").height / 1.3,
+        justifyContent: "center",
     }
-
-
 
     return (
 
@@ -86,7 +111,7 @@ const MainScreen = ({navigation}) => {
             <SafeAreaView style={styles.container}>
                 <StatusBar barStyle={"dark-content"} />
                 <ModalView modalVisible={modalVisible2} setModalVisible={setModalVisible2}>
-                    <CreateLocation visible={modalVisible2} setVisible={setModalVisible2}/>
+                    <CreateLocation get_list={get_list} visible={modalVisible2} setVisible={setModalVisible2}/>
                 </ModalView>
 
                 <View style={styles.row}>
@@ -99,20 +124,27 @@ const MainScreen = ({navigation}) => {
                     <ModalView modalVisible={modalVisible} setModalVisible={setModalVisible}>
                         <View>
                             <View style={styles_exp.screen}>
-                                <ButtonRefresh onPress={get_list}/>
-                                <Button onPress={fn_import} name_icon={"file-import"} title={"Импорт"}/>
-                                <Button onPress={fn_export} name_icon={"file-export"} title={"Экспорт"}/>
+                                {selectedLocations.length > 0 && <Add_location onPress={() => {
+                                    setSelectedLocations([])
+                                    setModalVisible(false)
+                                }} title={"Отменить"}/>}
+                                <Button disabled = {false} onPress={fn_import} name_icon={"file-import"} title={"Импорт"}/>
+                                {selectedLocations.length > 0 && <Button disabled = {true} onPress={fn_export} name_icon={"file-export"} title={"Экспорт"}/>}
                             </View>
                         </View>
                     </ModalView>
                 </View>
                 <View style={styles.row}>
-                    <View style={styles.container}>
+                    <View style={locations && !locations.length <= 0 ? [styles.container, dataNotExistStyle] : styles.container}>
                         <FlatList
                             style={{maxHeight: "100%"}}
                             data={locations}
                             keyExtractor={(item) => item.id}
+                            ListEmptyComponent={<Text style={{textAlign: "center",color: "gray", fontSize: 16}}>Локации не найдены</Text>}
                             renderItem={({item}) => <Location
+                                toSelect={toSelect}
+                                handleLocationPress={handleLocationPress}
+                                isSelected={selectedLocations.includes(item.id)}
                                 onPress={()=> navigation.navigate("Сканирование", {id: item.id, title: item.title})}
                                 item={item}/>}
                         />

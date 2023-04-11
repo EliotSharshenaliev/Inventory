@@ -1,12 +1,12 @@
-import React, {useEffect, useState} from 'react';
+import React, {useLayoutEffect, useState} from 'react';
 import {View, Text, StyleSheet, FlatList} from 'react-native';
-import Button from "../components/button";
 import ScannerModal from "../components/camera";
 import ScannerButton from "../components/scannerbtx";
 import ModalView from "../components/modal_view";
 import {styles_exp} from "../styles/style";
 import {DataTable} from "react-native-paper";
 import {useNavigation} from "@react-navigation/native";
+import HeaderListButton from "../components/headerButton";
 
 export const CamScreen = ({route}) => {
     const {id, title} = route.params
@@ -20,7 +20,13 @@ export const CamScreen = ({route}) => {
         </DataTable.Row>
     );
 
-    const fn_insert_last_scannned = (new_obj) =>{
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerRight: () => <HeaderListButton onPress={()=> navigation.navigate('Список', {id_location: id})} />,
+        });
+    }, [navigation]);
+
+    const fn_insert_last_scannned = async (new_obj) =>{
         set_last_scanned(
             [...last_scanned_data.slice(last_scanned_data.length - 2, last_scanned_data.length), new_obj]
         )
@@ -28,16 +34,11 @@ export const CamScreen = ({route}) => {
 
     return (
         <View>
-
-            <View style={[styles.modalContainer, {height:"90%"}]}>
+            <View style={[styles.modalContainer, {height:"100%"}]}>
                 <View style={styles.contentContainer}>
-                    <View style={styles.lineContainer}>
-                    </View>
-                    <View style={[ styles.title]}>
+                    <View style={styles.title}>
                         <Text style={styles_exp.subTitle}>Название локации: </Text>
                         <Text style={styles_exp.todoTitle}>{title}</Text>
-                    </View>
-                    <View style={styles.lineContainer}>
                     </View>
                     <View>
                         <DataTable>
@@ -55,16 +56,16 @@ export const CamScreen = ({route}) => {
                         </DataTable>
                     </View>
 
-                    <ModalView modalVisible={modalVisible} setModalVisible={setModalVisible}>
+                    <ModalView isCam={true} modalVisible={modalVisible} setModalVisible={setModalVisible}>
                         <ScannerModal
                             locationId={id}
                             insert_last_scanned_callback={fn_insert_last_scannned}
                             modalVisible={modalVisible} setModalVisible={setModalVisible}/>
                     </ModalView>
-                    <ScannerButton onPress={() => setModalVisible(true)}/>
-                    <Button title={"Список"} size={20} name_icon={"list"} onPress={()=> {
-                        navigation.navigate('Список', {id_location: id})
-                    }}/>
+                    <ScannerButton onPress={() => {
+                        setModalVisible(true)
+                    }
+                    }/>
                 </View>
             </View>
         </View>
@@ -73,7 +74,7 @@ export const CamScreen = ({route}) => {
 
 const styles = StyleSheet.create({
     modalContainer: {
-        justifyContent: "flex-start",
+        justifyContent: "center",
         backgroundColor: 'white',
         borderTopLeftRadius: 17,
         borderTopRightRadius: 17,
@@ -94,12 +95,13 @@ const styles = StyleSheet.create({
     },
     contentContainer: {
         flex: 1,
+        justifyContent: "space-around"
     },
     title: {
         flexDirection: "column",
         justifyContent: 'center',
         alignItems: 'center',
-        gap: "5%",
+        gap: 15,
     }
 });
 

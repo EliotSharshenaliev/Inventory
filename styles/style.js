@@ -22,10 +22,12 @@ export const styles_exp = StyleSheet.create({
         width: "100%",
         padding: 12,
         marginBottom: 10,
+
     },
     todoContainer: {
         flexDirection: "row",
         justifyContent: "space-between",
+        alignItems: "center",
         backgroundColor: "rgba(108,99,255,0.13)",
         padding: 15,
         borderRadius: 10,

@@ -4,48 +4,43 @@ import React, {useContext, useEffect, useState} from "react";
 import TableOfBarcodes from "../screens/table";
 import LoaderModalView from "../components/loader";
 import MainScreen from "../screens/main";
-import * as Camera from "expo-barcode-scanner";
-import {Text, View} from "react-native";
 import {CamScreen} from "../screens/cam";
+import MessageModalView from "../components/message";
+import {BarCodeScanner} from "expo-barcode-scanner";
+import * as MediaLibrary from 'expo-media-library';
 import {Context} from "../context/context";
 
 const Stack = createStackNavigator();
 
-export default function AppContainer() {
-    const { loading} = useContext(Context)
+export function AppContainer() {
+    const [hasCameraPermission, setHasCameraPermission] = useState(null);
+    const [hasMediaLibraryPermission, setHasMediaLibraryPermission] = useState(null);
+    const {loading} = useContext(Context)
 
-    const [hasPermissionLibrary, setHasPermissionLibrary] = useState(null);
-    const [hasPermissionCamera, setHasPermissionCamera] = useState(null);
 
     useEffect(() => {
-        const get_requests = async () => {
-            const { status } = await Camera.requestPermissionsAsync();
-            setHasPermissionCamera(status === 'granted');
-        }
-        get_requests()
+        (async () => {
+            const { status: cameraStatus } = await BarCodeScanner.requestPermissionsAsync();
+            const { status: mediaLibraryStatus } = await MediaLibrary.requestPermissionsAsync();
+
+            setHasCameraPermission(cameraStatus === 'granted');
+            setHasMediaLibraryPermission(mediaLibraryStatus === 'granted');
+        })();
     }, []);
 
-    if (hasPermissionCamera === null && hasPermissionLibrary === null) {
-        return <LoaderModalView loading={true}/>;
-    }
-    if (!hasPermissionCamera && !hasPermissionLibrary) {
-        return (
-            <View style={{flex: 1, justifyContent: "center", alignItems: "center"}}>
-                <Text>Нету доступа на {!hasPermissionCamera ? "Камеру" : ""} {!hasPermissionLibrary ? "Файлам" : ""}</Text>
-            </View>
-        )
-    }
+
 
     return (
         <>
+            <LoaderModalView loading={loading}/>
             <NavigationContainer>
                 <Stack.Navigator>
-                    <Stack.Screen options={{headerShown: false}} name="Home" component={MainScreen}/>
+                    <Stack.Screen options={{headerShown: false}} name="Локации" component={MainScreen}/>
                     <Stack.Screen name="Сканирование" component={CamScreen}/>
                     <Stack.Screen name={"Список"} component={TableOfBarcodes}/>
                 </Stack.Navigator>
             </NavigationContainer>
-            {loading && <LoaderModalView/>}
+            <MessageModalView/>
         </>
     );
 

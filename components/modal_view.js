@@ -5,7 +5,7 @@ import Modal from 'react-native-modal';
 import {ExitButton} from "./button";
 
 
-export default function ModalView({children, modalVisible, setModalVisible }) {
+export default function ModalView({isCam = false, children, modalVisible, setModalVisible }) {
 
     return (
         <Modal
@@ -17,7 +17,7 @@ export default function ModalView({children, modalVisible, setModalVisible }) {
         >
 
             <View style={styles.modalContainer}>
-                <View style={styles.content}>
+                <View style={[styles.content, !isCam &&  {backgroundColor: "white",}]}>
                     {children}
                     <ExitButton name_icon={"exit-to-app"} title={"отменить"} onPress={() => setModalVisible(false)}/>
                 </View>
@@ -35,7 +35,6 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: 20,
-        backgroundColor: "white",
         borderRadius: 15,
     }
 });

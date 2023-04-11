@@ -1,23 +1,24 @@
 import React, {useContext, useState} from 'react';
-import {Pressable, TextInput, View, Text} from "react-native";
+import {TextInput, View} from "react-native";
 import {styles_exp} from "../styles/style";
 import {Add_location} from "./button";
 import {useService} from "../db/services/service";
-import {Context} from "../context/context";
 
-const CreateLocation = ({visible, setVisible}) => {
+const CreateLocation = ({get_list, visible, setVisible}) => {
     const [input, setInput] = useState("");
     const {create_location} = useService()
     const handleSubmit = async () => {
         if (input.trim()) {
             await create_location({ input })
             setVisible(!visible);
+            get_list()
         }
     };
     return (
         <View>
             <TextInput
                 placeholder={"Название локации"}
+                placeholderTextColor="gray"
                 style={styles_exp.text_Input}
                 value={input}
                 autoFocus={true}

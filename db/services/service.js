@@ -34,7 +34,7 @@ export const useService  = () => {
         return new Promise((resolve, reject)=> {
             db.transaction((tx) => {
                 tx.executeSql(
-                    'SELECT * FROM Locations',
+                    'SELECT * FROM Locations ORDER BY id DESC',
                     [],
                     (_, { rows: { _array } }) => {
                         resolve(_array)
@@ -104,6 +104,17 @@ export const useService  = () => {
             )
         });
     }
+
+    const get_location_name_by_id = id => {
+        return new Promise((resolve, reject) => {
+            db.transaction(tx => {
+                tx.executeSql('SELECT title FROM Locations where id = ?', [id],
+                    (_, {rows}) => resolve(rows._array[0]),
+                    (transaction, error) => reject(error)
+                )
+            });
+        })
+    }
     const insert_items_base_codes = async (rows) => {
         return new Promise((resolve, reject) => {
             db.transaction(
@@ -125,12 +136,14 @@ export const useService  = () => {
     };
 
     const insert_items_compared_base = ({code, article, locationId}) => {
-        db.transaction(tx => {
-            tx.executeSql('INSERT INTO Compared_items (code, article, scanned_at, locationId) VALUES (?, ?, datetime(\'now\'), ?);', [code, article, locationId],
-                (_, resultSet) => {},
-                (transaction, error) => {}
-            )
-        });
+        return new Promise((resolve, reject)=> {
+            db.transaction(tx => {
+                tx.executeSql('INSERT INTO Compared_items (code, article, scanned_at, locationId) VALUES (?, ?, datetime(\'now\'), ?);', [code, article, locationId],
+                    (_, resultSet) => resolve(resultSet),
+                    (transaction, error) => reject(error)
+                )
+            });
+        })
     }
     const get_confirmed_list = (id_location, setData) => {
 
@@ -155,15 +168,15 @@ export const useService  = () => {
         )
     }
 
-    const get_export_datas = () => {
+    const get_export_datas = id => {
         return new Promise((resolve, reject) => {
             db.transaction(
                 tx => {
                     tx.executeSql(
-                        'SELECT code, article, scanned_at FROM Compared_items',
-                        [],
+                        'SELECT code, article, scanned_at FROM Compared_items Where locationId = ?',
+                        [id],
                         (_, { rows: { _array } }) => resolve(_array),
-                        (_, error) => reject(error)
+                        (_, error) => resolve(error)
                     )
                 },
                 error => reject(error)
@@ -171,18 +184,21 @@ export const useService  = () => {
         })
     }
 
-    const compare_base_with_scanned = (scanned_barcode, response_callback) => {
-        db.transaction(
-            (tx) => tx.executeSql("SELECT code, article FROM Items Where code = ?", [scanned_barcode],
-                async (_, { rows: { _array } }) => {
-                    await response_callback(_array)
-                }
-            ),
-            (error) => console.log(error)
-        )
+    const compare_base_with_scanned = (scanned_barcode) => {
+        return new Promise((resolve, reject) => {
+            db.transaction(
+                (tx) => tx.executeSql("SELECT code, article FROM Items Where code = ?", [scanned_barcode],
+                     (_, { rows: { _array } }) => {
+                         resolve(_array)
+                    }
+                ),
+                (error) => reject(error)
+            )
+        })
     }
 
     return {
+        get_location_name_by_id,
         insert_items_base_codes,
         insert_items_compared_base,
         get_confirmed_list,
